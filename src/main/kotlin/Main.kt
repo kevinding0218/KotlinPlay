@@ -3,6 +3,7 @@ import kotlinx.coroutines.CancellationException
 import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.ThreadPoolExecutor.AbortPolicy
+import kotlin.random.Random.Default.nextInt
 
 
 fun main(args: Array<String>) {
@@ -35,8 +36,8 @@ private fun threadpoolInCoroutine() {
             scope.launch {
                 try {
                     // launch does only submit, each task might be executed in different thread
-//                    myTaskWithNonBlocking(eventId)
-                    myTaskWithBlocking(eventId)
+                    myTaskWithNonBlocking(eventId)
+//                    myTaskWithBlocking(eventId)
                 } catch (e: CancellationException) {
                     logTs("Task $eventId was cancelled.")
                 } catch (e: RejectedExecutionException) {
@@ -81,14 +82,14 @@ private fun threadpoolInJava(events: List<Event>) {
 
 private suspend fun myTaskWithNonBlocking(eventId: Int) {
     logTs("Task $eventId is running on ${Thread.currentThread().name}")
-    val period = Random(10).nextInt(5000)
+    val period = kotlin.random.Random.nextInt(5000)
     delay(period.toLong())
     logTs("Task $eventId on thread ${Thread.currentThread().name} with delay $period completed")
 }
 
 private fun myTaskWithBlocking(eventId: Int) {
     logTs("Task $eventId is running on ${Thread.currentThread().name}")
-    val period = Random(10).nextInt(5000)
+    val period = kotlin.random.Random.nextInt(5000)
     Thread.sleep(period.toLong())
     logTs("Task $eventId on thread ${Thread.currentThread().name} with delay $period completed")
 }

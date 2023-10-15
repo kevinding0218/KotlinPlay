@@ -1,4 +1,5 @@
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStreamReader
@@ -17,8 +18,7 @@ fun main(args: Array<String>) {
 //    })
 
 //    runInParallel2()
-    val result = runInParallel3()
-    println("result in runInParallel3 is $result")
+    runInParallel3()
 //    runInParallel4()
 }
 
@@ -70,30 +70,36 @@ fun runInParallel2() {
     }
 }
 
-fun runInParallel3(): Int {
-    val threadPool = Executors.newFixedThreadPool(2) // Create a fixed thread pool with 2 threads
-    val scope = CoroutineScope(threadPool.asCoroutineDispatcher())
+
+fun runInParallel3() {
+    val threadPoolDispatcher = newFixedThreadPoolContext(5, "sum-pool-")
     var sum = 0
+    val totalSum = MutableStateFlow(0)
 
-    runBlocking {
-        (3..10).forEach{ n ->
-            scope.launch {
-                val deferredResult1 = async {
-                    logTs( "register resultDelay3Deferred")
-                    httpCallWithDelay(n)
-                }
+    CoroutineScope(Dispatchers.IO).launch {
+        totalSum.collect {
+            println("final sum is $sum")
 
-                val result1 = deferredResult1.await()
-
-                println(result1)
-                sum += result1
-                println("current sum is $sum")
-            }
         }
     }
-
-    println("final sum is $sum")
-    return sum
+    runBlocking {
+        coroutineScope {
+            (3..10).map { n ->
+                async {
+                    val result = withContext(threadPoolDispatcher) {
+//                    httpCallWithDelayMock(n)
+                        httpCallWithDelay(n)
+                    }
+                    sum += result
+                    println("current sum is $sum")
+                    if (sum > 10) {
+                        totalSum.emit(sum)
+                        this.cancel()
+                    }
+                }
+            }.awaitAll()
+        }
+    }
 }
 
 fun runInParallel4() {
