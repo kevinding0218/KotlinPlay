@@ -31,11 +31,11 @@ fun runInParallel(result: (result1: Int, result2: Int) -> Unit) {
         scope.launch {
             val deferredResult1 = async {
                 logTs( "register resultDelay3Deferred")
-                httpCallWithDelay(3)
+                httpBlockingCallWithDelay(3)
             }
             val deferredResult2 = async {
                 logTs( "register resultDelay5Deferred")
-                httpCallWithDelay(5)
+                httpBlockingCallWithDelay(5)
             }
 
             val result1 = deferredResult1.await()
@@ -54,11 +54,11 @@ fun runInParallel2() {
         scope.launch {
             val deferredResult1 = async {
                 logTs( "register resultDelay3Deferred")
-                httpCallWithDelay(3)
+                httpBlockingCallWithDelay(3)
             }
             val deferredResult2 = async {
                 logTs( "register resultDelay5Deferred")
-                httpCallWithDelay(5)
+                httpBlockingCallWithDelay(5)
             }
 
             val result1 = deferredResult1.await()
@@ -87,8 +87,8 @@ fun runInParallel3() {
             (3..10).map { n ->
                 async {
                     val result = withContext(threadPoolDispatcher) {
-//                    httpCallWithDelayMock(n)
-                        httpCallWithDelay(n)
+//                    httpNonBlockingCallWithDelay(n)
+                        httpBlockingCallWithDelay(n)
                     }
                     sum += result
                     println("current sum is $sum")
@@ -113,7 +113,7 @@ fun runInParallel4() {
             (3..5).forEach { n ->
                 val deferredResult1 = async {
                     logTs( "register resultDelay3Deferred")
-                    httpCallWithDelay(n)
+                    httpBlockingCallWithDelay(n)
                 }
 
                 val result1 = deferredResult1.await()
@@ -123,7 +123,7 @@ fun runInParallel4() {
     }
 }
 
-fun httpCallWithDelay(delay: Int): Int {
+fun httpBlockingCallWithDelay(delay: Int): Int {
     var result = ""
     try {
         logTs("call started with delay of $delay second on thread ${Thread.currentThread().name}")
@@ -169,6 +169,15 @@ fun httpCallWithDelay(delay: Int): Int {
         result = "call with delay $delay has exception: ${e.message}"
     }
 //    return result
+    return delay
+}
+
+suspend fun httpNonBlockingCallWithDelay(delay: Int): Int {
+    logTs("call started with delay of $delay second on thread ${Thread.currentThread().name}")
+
+    delay((delay * 1000).toLong())
+    logTs("call completed with delay of $delay second on thread ${Thread.currentThread().name}")
+
     return delay
 }
 
