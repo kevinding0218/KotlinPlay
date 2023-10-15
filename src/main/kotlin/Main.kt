@@ -1,15 +1,13 @@
 import kotlinx.coroutines.*
 import kotlinx.coroutines.CancellationException
-import java.util.*
 import java.util.concurrent.*
 import java.util.concurrent.ThreadPoolExecutor.AbortPolicy
-import kotlin.random.Random.Default.nextInt
 
 
 fun main(args: Array<String>) {
 
 //    threadpoolInJava()
-    threadpoolInCoroutine()
+    blockingVsNonBlockingInCoroutine()
     // Shutdown the custom thread pool to release resources
 }
 
@@ -25,7 +23,7 @@ fun main(args: Array<String>) {
    Behavior: When you use Thread.sleep, it blocks the current thread (in this case, the entire thread) for a specified duration (in milliseconds). This means that no other tasks or coroutines can execute on the same thread during the sleep period.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-private fun threadpoolInCoroutine() {
+private fun blockingVsNonBlockingInCoroutine() {
     val threadPool = Executors.newFixedThreadPool(2)
 
 //    val scope = CoroutineScope(threadPool.asCoroutineDispatcher().limitedParallelism(3))
@@ -36,8 +34,8 @@ private fun threadpoolInCoroutine() {
             scope.launch {
                 try {
                     // launch does only submit, each task might be executed in different thread
-                    myTaskWithNonBlocking(eventId)
-//                    myTaskWithBlocking(eventId)
+//                    myTaskWithNonBlocking(eventId)
+                    executeBlockingTask(eventId)
                 } catch (e: CancellationException) {
                     logTs("Task $eventId was cancelled.")
                 } catch (e: RejectedExecutionException) {
@@ -51,7 +49,7 @@ private fun threadpoolInCoroutine() {
 //    threadPool.shutdown()
 }
 
-private fun threadpoolInJava(events: List<Event>) {
+private fun threadpoolInJava() {
     val threadPool1 = Executors.newFixedThreadPool(2) // Create a fixed thread pool with 2 threads
     val threadPool2 = ThreadPoolExecutor(
         1,                  // Core pool size
@@ -67,7 +65,7 @@ private fun threadpoolInJava(events: List<Event>) {
     (1..30).forEach { eventId ->
         try {
             threadPool2.execute {
-                myTaskWithBlocking(eventId)
+                executeBlockingTask(eventId)
             }
         } catch (e: CancellationException) {
             println("Task $eventId was cancelled.")
@@ -80,23 +78,19 @@ private fun threadpoolInJava(events: List<Event>) {
     threadPool2.shutdown()
 }
 
-private suspend fun myTaskWithNonBlocking(eventId: Int) {
+private suspend fun executeNonBlockingTask(eventId: Int) {
     logTs("Task $eventId is running on ${Thread.currentThread().name}")
     val period = kotlin.random.Random.nextInt(5000)
     delay(period.toLong())
     logTs("Task $eventId on thread ${Thread.currentThread().name} with delay $period completed")
 }
 
-private fun myTaskWithBlocking(eventId: Int) {
+private fun executeBlockingTask(eventId: Int) {
     logTs("Task $eventId is running on ${Thread.currentThread().name}")
     val period = kotlin.random.Random.nextInt(5000)
     Thread.sleep(period.toLong())
     logTs("Task $eventId on thread ${Thread.currentThread().name} with delay $period completed")
 }
-
-data class Event(
-    val eventId: Int
-)
 
 class CustomAbortPolicy() : AbortPolicy() {
     override fun rejectedExecution(r: Runnable, executor: ThreadPoolExecutor) {
@@ -133,16 +127,6 @@ internal class MyRejectedExecutionHandler : RejectedExecutionHandler {
             println("Task resubmitted successfully.")
         } catch (e: InterruptedException) {
             println("Task resubmit failed: $e")
-            Thread.currentThread().interrupt()
-        }
-    }
-}
-
-internal class CustomTask(private val eventId: Int) : Runnable {
-    override fun run() {
-        try {
-            myTaskWithBlocking(eventId)
-        } catch (e: InterruptedException) {
             Thread.currentThread().interrupt()
         }
     }
